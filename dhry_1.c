@@ -14,6 +14,7 @@
  *
  ****************************************************************************
  */
+#include <sys/prctl.h>
 
 #include "dhry.h"
 
@@ -73,8 +74,14 @@ float           Microseconds,
 
 /* end of variables for time measurement */
 
+void print_usage(const char *prog_name)
+{
+  fprintf(stderr, "Usage: %s <speculation_type>\n", prog_name);
+  fprintf(stderr, "  ssb  - Only enable Store Bypass mitigation (PR_SPEC_STORE_BYPASS)\n");
+  fprintf(stderr, "  ib   - Only enable Indirect Branch mitigation (PR_SPEC_INDIRECT_BRANCH)\n");
+}
 
-main ()
+int main(int argc, char *argv[])
 /*****/
 
   /* main program, corresponds to procedures        */
@@ -89,6 +96,33 @@ main ()
         Str_30          Str_2_Loc;
   REG   int             Run_Index;
   REG   int             Number_Of_Runs;
+
+  /* args */
+  if (argc != 2) {
+    print_usage(argv[0]);
+    return EXIT_FAILURE;
+  }
+
+  int spec_type = -1;
+  if (strcmp(argv[1], "ssb") == 0) {
+    spec_type = PR_SPEC_STORE_BYPASS;
+  } else if (strcmp(argv[1], "ib") == 0) {
+    spec_type = PR_SPEC_INDIRECT_BRANCH;
+  } else {
+    fprintf(stderr, "Error: Invalid argument '%s' (disable all)\n", argv[1]);
+    print_usage(argv[0]);
+  }
+
+  if (spec_type == PR_SPEC_STORE_BYPASS) {
+    prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_STORE_BYPASS, PR_SPEC_ENABLE, 0, 0);
+    prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_INDIRECT_BRANCH, PR_SPEC_DISABLE, 0, 0);
+  } else if (spec_type == PR_SPEC_INDIRECT_BRANCH) {
+    prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_STORE_BYPASS, PR_SPEC_DISABLE, 0, 0);
+    prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_INDIRECT_BRANCH, PR_SPEC_ENABLE, 0, 0);
+  } else {
+    prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_STORE_BYPASS, PR_SPEC_DISABLE, 0, 0);
+    prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_INDIRECT_BRANCH, PR_SPEC_DISABLE, 0, 0);
+  }
 
   /* Initializations */
 
